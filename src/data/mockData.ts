@@ -210,76 +210,121 @@ export function generateRecommendations(
 ): BetRecommendation[] {
   const recommendations: BetRecommendation[] = [];
 
-  // Goals analysis
-  const avgTotalGoals = team1Stats.avgGoalsScored + team1Stats.avgGoalsConceded +
-    team2Stats.avgGoalsScored + team2Stats.avgGoalsConceded;
-  const expectedGoals = avgTotalGoals / 2;
+  // Expected goals calculation
+  const expectedGoals = (team1Stats.avgGoalsScored + team2Stats.avgGoalsScored + 
+    team1Stats.avgGoalsConceded + team2Stats.avgGoalsConceded) / 2;
 
-  if (expectedGoals >= 3) {
-    recommendations.push({
-      type: 'Over/Under Gols',
-      recommendation: 'Over 2.5 Gols',
-      confidence: expectedGoals >= 3.5 ? 'high' : 'medium',
-      reasoning: `Média de ${expectedGoals.toFixed(1)} gols por jogo combinado. ${team1Stats.teamName} marca ${team1Stats.avgGoalsScored.toFixed(1)} gols/jogo.`,
-      value: expectedGoals,
-    });
-  } else if (expectedGoals <= 2) {
-    recommendations.push({
-      type: 'Over/Under Gols',
-      recommendation: 'Under 2.5 Gols',
-      confidence: expectedGoals <= 1.5 ? 'high' : 'medium',
-      reasoning: `Média de apenas ${expectedGoals.toFixed(1)} gols por jogo. Jogos tendem a ser mais fechados.`,
-      value: expectedGoals,
-    });
-  }
+  // Over 1 Goal Analysis
+  const over1Prob = expectedGoals >= 1.5;
+  recommendations.push({
+    type: 'Over 1 Gol',
+    recommendation: over1Prob ? 'Over 0.5 Gols ✓' : 'Under 0.5 Gols',
+    confidence: expectedGoals >= 2 ? 'high' : expectedGoals >= 1.2 ? 'medium' : 'low',
+    reasoning: `Média de ${expectedGoals.toFixed(1)} gols/jogo. ${team1Stats.teamName}: ${team1Stats.avgGoalsScored.toFixed(1)} marcados, ${team2Stats.teamName}: ${team2Stats.avgGoalsScored.toFixed(1)} marcados.`,
+    value: expectedGoals,
+  });
+
+  // Over 1.5 Goals Analysis
+  const over15Prob = expectedGoals >= 2;
+  recommendations.push({
+    type: 'Over 1.5 Gols',
+    recommendation: over15Prob ? 'Over 1.5 Gols ✓' : 'Under 1.5 Gols',
+    confidence: expectedGoals >= 2.5 ? 'high' : expectedGoals >= 1.8 ? 'medium' : 'low',
+    reasoning: `Expectativa de ${expectedGoals.toFixed(1)} gols. Jogos com mais de 1.5 gols são ${over15Prob ? 'prováveis' : 'menos prováveis'}.`,
+    value: expectedGoals,
+  });
+
+  // Over 2.5 Goals Analysis
+  const over25Prob = expectedGoals >= 2.5;
+  recommendations.push({
+    type: 'Over 2.5 Gols',
+    recommendation: over25Prob ? 'Over 2.5 Gols ✓' : 'Under 2.5 Gols',
+    confidence: expectedGoals >= 3 ? 'high' : expectedGoals >= 2.3 ? 'medium' : 'low',
+    reasoning: `${team1Stats.teamName} marca ${team1Stats.avgGoalsScored.toFixed(1)} e sofre ${team1Stats.avgGoalsConceded.toFixed(1)}. ${team2Stats.teamName} marca ${team2Stats.avgGoalsScored.toFixed(1)} e sofre ${team2Stats.avgGoalsConceded.toFixed(1)}.`,
+    value: expectedGoals,
+  });
+
+  // Cards Statistics
+  const avgTotalCards = team1Stats.avgCards + team2Stats.avgCards;
+  const team1TotalCards = team1Stats.totalYellowCards + team1Stats.totalRedCards;
+  const team2TotalCards = team2Stats.totalYellowCards + team2Stats.totalRedCards;
+  
+  // Calculate min and max cards from matches
+  const team1CardsByMatch = team1Stats.matches.map(m => 
+    (m.isHome ? m.homeYellowCards + m.homeRedCards : m.awayYellowCards + m.awayRedCards)
+  );
+  const team2CardsByMatch = team2Stats.matches.map(m => 
+    (m.isHome ? m.homeYellowCards + m.homeRedCards : m.awayYellowCards + m.awayRedCards)
+  );
+  
+  const allCardsPerMatch = team1Stats.matches.map((m, i) => {
+    const t1Cards = m.isHome ? m.homeYellowCards + m.homeRedCards : m.awayYellowCards + m.awayRedCards;
+    const t2Cards = team2Stats.matches[i] ? 
+      (team2Stats.matches[i].isHome ? team2Stats.matches[i].homeYellowCards + team2Stats.matches[i].homeRedCards : 
+       team2Stats.matches[i].awayYellowCards + team2Stats.matches[i].awayRedCards) : 0;
+    return t1Cards + t2Cards;
+  });
+
+  const minCards = Math.min(...team1CardsByMatch) + Math.min(...team2CardsByMatch);
+  const maxCards = Math.max(...team1CardsByMatch) + Math.max(...team2CardsByMatch);
+
+  // Both Teams Receive Cards Analysis
+  const team1AlwaysGetCards = team1CardsByMatch.every(c => c >= 1);
+  const team2AlwaysGetCards = team2CardsByMatch.every(c => c >= 1);
+  const team1CardPercentage = (team1CardsByMatch.filter(c => c >= 1).length / team1CardsByMatch.length) * 100;
+  const team2CardPercentage = (team2CardsByMatch.filter(c => c >= 1).length / team2CardsByMatch.length) * 100;
+  const bothTeamsCardProb = (team1CardPercentage + team2CardPercentage) / 2;
+
+  recommendations.push({
+    type: 'Ambas Recebem Cartão',
+    recommendation: bothTeamsCardProb >= 80 ? 'Sim - Ambas Recebem ✓' : bothTeamsCardProb >= 60 ? 'Provável' : 'Improvável',
+    confidence: bothTeamsCardProb >= 90 ? 'high' : bothTeamsCardProb >= 70 ? 'medium' : 'low',
+    reasoning: `${team1Stats.teamName} recebe cartão em ${team1CardPercentage.toFixed(0)}% dos jogos. ${team2Stats.teamName} recebe em ${team2CardPercentage.toFixed(0)}% dos jogos.`,
+    value: bothTeamsCardProb,
+  });
+
+  // Min/Max Cards Analysis
+  recommendations.push({
+    type: 'Cartões - Mínimo/Máximo',
+    recommendation: `Min: ${minCards} | Max: ${maxCards}`,
+    confidence: 'medium',
+    reasoning: `Média combinada: ${avgTotalCards.toFixed(1)} cartões/jogo. ${team1Stats.teamName}: ${team1Stats.avgCards.toFixed(1)} | ${team2Stats.teamName}: ${team2Stats.avgCards.toFixed(1)}`,
+    value: avgTotalCards,
+  });
+
+  // Total Cards Over/Under
+  recommendations.push({
+    type: 'Total de Cartões',
+    recommendation: avgTotalCards >= 5 ? 'Over 4.5 Cartões ✓' : 'Under 4.5 Cartões',
+    confidence: avgTotalCards >= 6 ? 'high' : avgTotalCards >= 4.5 ? 'medium' : 'low',
+    reasoning: `Média de ${avgTotalCards.toFixed(1)} cartões por jogo. Faixa esperada: ${minCards}-${maxCards} cartões.`,
+    value: avgTotalCards,
+  });
 
   // Corners analysis
   const avgTotalCorners = team1Stats.avgCorners + team2Stats.avgCorners;
-  if (avgTotalCorners >= 9) {
-    recommendations.push({
-      type: 'Escanteios',
-      recommendation: 'Over 9.5 Escanteios',
-      confidence: avgTotalCorners >= 11 ? 'high' : 'medium',
-      reasoning: `Média combinada de ${avgTotalCorners.toFixed(1)} escanteios. ${team1Stats.teamName}: ${team1Stats.avgCorners.toFixed(1)}/jogo.`,
-      value: avgTotalCorners,
-    });
-  } else {
-    recommendations.push({
-      type: 'Escanteios',
-      recommendation: 'Under 9.5 Escanteios',
-      confidence: avgTotalCorners <= 7 ? 'high' : 'low',
-      reasoning: `Média combinada de ${avgTotalCorners.toFixed(1)} escanteios por jogo.`,
-      value: avgTotalCorners,
-    });
-  }
-
-  // Cards analysis
-  const avgTotalCards = team1Stats.avgCards + team2Stats.avgCards;
-  if (avgTotalCards >= 5) {
-    recommendations.push({
-      type: 'Cartões',
-      recommendation: 'Over 4.5 Cartões',
-      confidence: avgTotalCards >= 6 ? 'high' : 'medium',
-      reasoning: `Média de ${avgTotalCards.toFixed(1)} cartões por jogo. Partida pode ser disputada.`,
-      value: avgTotalCards,
-    });
-  }
+  recommendations.push({
+    type: 'Escanteios',
+    recommendation: avgTotalCorners >= 9 ? 'Over 9.5 Escanteios ✓' : 'Under 9.5 Escanteios',
+    confidence: avgTotalCorners >= 11 ? 'high' : avgTotalCorners >= 8 ? 'medium' : 'low',
+    reasoning: `Média combinada de ${avgTotalCorners.toFixed(1)} escanteios. ${team1Stats.teamName}: ${team1Stats.avgCorners.toFixed(1)} | ${team2Stats.teamName}: ${team2Stats.avgCorners.toFixed(1)}`,
+    value: avgTotalCorners,
+  });
 
   // BTTS (Both Teams To Score)
-  const team1ScoresOften = team1Stats.avgGoalsScored >= 1.2;
-  const team2ScoresOften = team2Stats.avgGoalsScored >= 1;
-  const team1ConcedesOften = team1Stats.avgGoalsConceded >= 0.8;
-  const team2ConcedesOften = team2Stats.avgGoalsConceded >= 1;
+  const team1ScoresOften = team1Stats.avgGoalsScored >= 1;
+  const team2ScoresOften = team2Stats.avgGoalsScored >= 0.8;
+  const team1ConcedesOften = team1Stats.avgGoalsConceded >= 0.6;
+  const team2ConcedesOften = team2Stats.avgGoalsConceded >= 0.8;
+  const bttsLikely = team1ScoresOften && team2ScoresOften && team1ConcedesOften && team2ConcedesOften;
 
-  if (team1ScoresOften && team2ScoresOften && team1ConcedesOften && team2ConcedesOften) {
-    recommendations.push({
-      type: 'Ambas Marcam',
-      recommendation: 'Sim - Ambas Marcam',
-      confidence: 'medium',
-      reasoning: `${team1Stats.teamName} marca ${team1Stats.avgGoalsScored.toFixed(1)} e sofre ${team1Stats.avgGoalsConceded.toFixed(1)} gols/jogo.`,
-      value: (team1Stats.avgGoalsScored + team2Stats.avgGoalsScored) / 2,
-    });
-  }
+  recommendations.push({
+    type: 'Ambas Marcam (BTTS)',
+    recommendation: bttsLikely ? 'Sim - Ambas Marcam ✓' : 'Não - Ambas Marcam',
+    confidence: bttsLikely && (team1Stats.avgGoalsScored >= 1.5 || team2Stats.avgGoalsScored >= 1.2) ? 'high' : bttsLikely ? 'medium' : 'low',
+    reasoning: `${team1Stats.teamName}: marca ${team1Stats.avgGoalsScored.toFixed(1)}, sofre ${team1Stats.avgGoalsConceded.toFixed(1)}. ${team2Stats.teamName}: marca ${team2Stats.avgGoalsScored.toFixed(1)}, sofre ${team2Stats.avgGoalsConceded.toFixed(1)}.`,
+    value: (team1Stats.avgGoalsScored + team2Stats.avgGoalsScored) / 2,
+  });
 
   return recommendations;
 }
