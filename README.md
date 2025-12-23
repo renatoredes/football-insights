@@ -1,8 +1,8 @@
-# Welcome to your Lovable project
+# FutAnalise Pro
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Análise Inteligente de Futebol
 
 ## How can I edit this code?
 

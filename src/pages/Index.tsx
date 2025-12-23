@@ -36,7 +36,7 @@ const Index = () => {
                   <Activity className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-foreground">FootStats Pro</h1>
+                  <h1 className="text-xl font-bold text-foreground">FutAnalise Pro</h1>
                   <p className="text-xs text-muted-foreground">Análise Inteligente de Futebol</p>
                 </div>
               </div>
@@ -99,7 +99,7 @@ const Index = () => {
         <footer className="border-t border-border/50 bg-card/30 py-8">
           <div className="container mx-auto px-4 text-center">
             <p className="text-sm text-muted-foreground">
-              © 2024 FootStats Pro. Dados atualizados dos últimos jogos.
+              © 2024 FutAnalise Pro. Dados atualizados dos últimos jogos.
             </p>
           </div>
         </footer>
