@@ -329,6 +329,37 @@ export function generateRecommendations(
   return recommendations;
 }
 
+// Map of teams and their upcoming/recent opponents
+const teamOpponents: Record<string, string> = {
+  'Arsenal': 'Crystal Palace',
+  'Crystal Palace': 'Arsenal',
+  'Manchester United': 'Liverpool',
+  'Liverpool': 'Manchester United',
+  'Chelsea': 'Tottenham',
+  'Tottenham': 'Chelsea',
+  'Manchester City': 'Aston Villa',
+  'Aston Villa': 'Manchester City',
+  'Newcastle': 'Brighton',
+  'Brighton': 'Newcastle',
+  'West Ham': 'Everton',
+  'Everton': 'West Ham',
+  'Fulham': 'Brentford',
+  'Brentford': 'Fulham',
+  'Wolves': 'Bournemouth',
+  'Bournemouth': 'Wolves',
+  'Nottingham Forest': 'Leicester',
+  'Leicester': 'Nottingham Forest',
+  'Southampton': 'Ipswich',
+  'Ipswich': 'Southampton',
+};
+
+export function getOpponent(teamName: string): string | null {
+  const normalizedName = Object.keys(teamOpponents).find(
+    key => key.toLowerCase() === teamName.toLowerCase()
+  );
+  return normalizedName ? teamOpponents[normalizedName] : null;
+}
+
 export function getMockAnalysis(team1: string, team2: string): AnalysisResult {
   // Use mock data for demo
   const team1Stats = calculateTeamStats(team1 || 'Arsenal', arsenalMatches);
