@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Search, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Zap, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getOpponent } from '@/data/mockData';
 
 interface TeamInputProps {
   onAnalyze: (team1: string, team2: string) => void;
@@ -9,8 +10,23 @@ interface TeamInputProps {
 }
 
 export function TeamInput({ onAnalyze, isLoading }: TeamInputProps) {
-  const [team1, setTeam1] = useState('Arsenal');
-  const [team2, setTeam2] = useState('Crystal Palace');
+  const [team1, setTeam1] = useState('');
+  const [team2, setTeam2] = useState('');
+
+  useEffect(() => {
+    if (team1.trim()) {
+      const opponent = getOpponent(team1.trim());
+      if (opponent) {
+        setTeam2(opponent);
+        // Auto-trigger analysis when opponent is found
+        onAnalyze(team1.trim(), opponent);
+      } else {
+        setTeam2('');
+      }
+    } else {
+      setTeam2('');
+    }
+  }, [team1]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +41,7 @@ export function TeamInput({ onAnalyze, isLoading }: TeamInputProps) {
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="flex-1 w-full">
             <label className="block text-sm font-medium text-muted-foreground mb-2">
-              Time da Casa
+              Digite o Time
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -33,7 +49,7 @@ export function TeamInput({ onAnalyze, isLoading }: TeamInputProps) {
                 type="text"
                 value={team1}
                 onChange={(e) => setTeam1(e.target.value)}
-                placeholder="Ex: Arsenal"
+                placeholder="Ex: Arsenal, Chelsea, Liverpool..."
                 className="pl-10 bg-secondary/50 border-border/50 h-12 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
               />
             </div>
@@ -44,17 +60,20 @@ export function TeamInput({ onAnalyze, isLoading }: TeamInputProps) {
           </div>
 
           <div className="flex-1 w-full">
-            <label className="block text-sm font-medium text-muted-foreground mb-2">
-              Time Visitante
+            <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+              Adversário
+              <Lock className="h-3 w-3 text-muted-foreground/70" />
+              <span className="text-xs text-muted-foreground/70">(automático)</span>
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
                 type="text"
                 value={team2}
-                onChange={(e) => setTeam2(e.target.value)}
-                placeholder="Ex: Crystal Palace"
-                className="pl-10 bg-secondary/50 border-border/50 h-12 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
+                readOnly
+                disabled
+                placeholder="Preenchido automaticamente"
+                className="pl-10 bg-secondary/30 border-border/30 h-12 text-foreground/80 placeholder:text-muted-foreground/50 cursor-not-allowed"
               />
             </div>
           </div>
@@ -68,6 +87,12 @@ export function TeamInput({ onAnalyze, isLoading }: TeamInputProps) {
             {isLoading ? 'Analisando...' : 'Analisar'}
           </Button>
         </div>
+        
+        {team1.trim() && !team2 && (
+          <p className="text-sm text-amber-400 mt-4 text-center">
+            Time não encontrado. Times disponíveis: Arsenal, Chelsea, Liverpool, Manchester United, Manchester City, Tottenham...
+          </p>
+        )}
       </div>
     </form>
   );
